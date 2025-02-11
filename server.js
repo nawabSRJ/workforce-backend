@@ -87,8 +87,6 @@ app.post('/client-signup', (req,res,next)=>{
     .catch(err => res.json(err));
 })
 
-
-
 app.listen(port,()=>{
     console.log(`Server is running on port ${port}`);    
 })
