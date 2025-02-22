@@ -5,10 +5,11 @@ import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import mongodbURL from "./config.js";
 import clientModel from './models/client.js';
-
+import bcrypt from "bcryptjs";
 
 
 const port = process.env.port || 8000;
+const SECRET_KEY = 'secret123';
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
@@ -26,65 +27,53 @@ mongoose.connect(`${mongodbURL}`, {
     useUnifiedTopology: true,
 })
 
-const verifyUser = (req,res,next)=>{
-    const token = req.cookies.token;
-    if(!token){
-        return res.json({message:"Token Please"});
-    }else{
-        jwt.verify(token, "our-token-key" , (err,decoded)=>{
-            if(err){
-                return res.json({message:"Auth Error"});
-            }else{
-                req.email = decoded.email;
-                next(); 
-            }
-        })
-    }
-}
+app.post('/verifyToken', (req, res) => {
+    const token = req.body.token;
+    if (!token) return res.json({ status: 'error' });
 
-// default route pe direct login if token found
-app.get('/', verifyUser, (req, res) => {
-    return res.json({ status: "Success", email: req.email });
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        res.json({ status: 'ok', user: decoded.name });
+    } catch (err) {
+        res.json({ status: 'error' });
+    }
 });
-  
 
 // login
-app.post('/client-login',(req,res,next)=>{
-    const {email,password} = req.body;
-    clientModel.findOne({email:email}) // key name : variable (destructured)
-    .then(client=>{
-        if(client){
-            if(client.password === password){
-                // grant token
-                const token = jwt.sign({email}, "our-token-key",{expiresIn:'1d'});
-                res.cookie('token',token);
-                return res.status(200).json({message:"Success"});
-            }
-            else{
-                // wrong password
-                res.status(401).json("Incorrect Password");
-            }
-        }else{
-            // No such client
-            return res.json({message:"Not Found"})
-        }
-    }).catch(err =>{
-        return res.json(err);
-    })
+app.post('/client-login', async (req,res,next)=>{
+    const cli = await clientModel.findOne({ email: req.body.email });
+
+    if (!cli) {
+        return res.json({ status: 'error', cli: false });
+    }
+
+    const isPasswordValid = await bcrypt.compare(req.body.password, cli.password);
+    if (isPasswordValid) {
+        const token = jwt.sign(
+            { name: cli.name, email: cli.email },
+            SECRET_KEY,
+            { expiresIn: "1h" }
+        );
+        return res.json({ status: 'ok', cli: token, user: cli.name });
+    } else {
+        return res.json({ status: 'error', cli: false });
+    }
 })
 
-// logout
-app.post('/client-logout', (req,res,next)=>{
-    res.clearCookie('token');
-    return res.json({status:"Success", message:"Logged Out"})
-})
-
-// sign-up ?
-app.post('/client-signup', (req,res,next)=>{
-    // create new user = new mongodb client model
-    clientModel.create(req.body)
-    .then(clients=>res.json(clients))
-    .catch(err => res.json(err));
+// sign-up 
+app.post('/client-signup', async (req,res,next)=>{
+    try {
+        const newPassword = await bcrypt.hash(req.body.password, 10);
+        await clientModel.create({
+            name: req.body.name,
+            email: req.body.email,
+            password: newPassword
+        });
+        res.json({ status: 'ok' });
+    } catch (error) {
+        console.log(error);
+        res.json({ status: 'error' });
+    }
 })
 
 app.listen(port,()=>{
