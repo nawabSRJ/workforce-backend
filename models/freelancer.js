@@ -2,10 +2,11 @@ import mongoose from "mongoose";
 
 const freelancerSchema = new mongoose.Schema({
     name:{type:String,required:true},
-    email:{type:String,required:true},
+    email:{type:String,required:true, unique:true},
     password:{type:String,required:true},
-    username:{type:String,required:true},
-    phone:{type:String,required:true},
+    gender:{type:String,required:true},
+    username:{type:String,required:true , unique:true},
+    phone:{type:String,required:true, unique:true},
     tags:[{type:String,required:true}], // List
     rating:{type:Number,default:0}, // avg. rating
     services:[{type:mongoose.Schema.Types.ObjectId, ref:'Service'}], // services offered by the freelancer

@@ -6,7 +6,7 @@ const OpenTaskSchema = new mongoose.Schema({
 
      // Project Details
      category: { type: String, required: true },
-     title: { type: String, required: true },
+     projTitle: { type: String, required: true },
      description: { type: String, required: true },
      references: [{ type: String }],  // Array of strings for multiple links
      deadline: { type: Date, required: true },

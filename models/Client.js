@@ -5,7 +5,7 @@ const clientSchema = new mongoose.Schema({
     email:{type:String,required:true,unique:true},
     password:{type:String,required:true},
     orders:[{type:mongoose.Schema.Types.ObjectId, ref:'Order'}] // orders placed by the client
-    
+    // todo : add phone number field and other fields too
 });
 
 const clientModel = mongoose.model('Client',clientSchema);

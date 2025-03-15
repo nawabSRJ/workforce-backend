@@ -1,6 +1,7 @@
-// backend logic to handle & store open task submitted by the user
+// backend logic to handle, send & store open task submitted by the user
 import openTaskModel from "../models/OpenTask.js";
 
+// creates new open task - "New Project" Btn
 export const newOpenTask = async (req, res) => {
     try {
         const {
@@ -37,3 +38,13 @@ export const newOpenTask = async (req, res) => {
         res.status(500).json({ status: "error", message: "Task creation failed", error });
     }
 };
+
+// Fetch all the data from the DB and send to frontend
+export const sendOpenTasks = async (req,res)=>{
+    try {
+        const data = await openTaskModel.find();    // fetches all the records
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({error:"Failed to fetch open tasks"})
+    }
+}
