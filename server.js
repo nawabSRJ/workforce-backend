@@ -58,7 +58,8 @@ app.get('/freelancers', sendFreelancersData);
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        // origin: "http://localhost:5173", // global
+        origin: "http://localhost:5173",    // local
         methods: ["GET", "POST"]
     },
     connectionStateRecovery: { // ADDED FOR BETTER RECONNECT HANDLING
