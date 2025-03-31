@@ -1,3 +1,4 @@
+// ?for : freelancer and client auth (signup + login)
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import clientModel from '../models/Client.js';
@@ -20,37 +21,145 @@ export const verifyToken = async (req, res) => {
 
 // ----------------------- Client Auth
 export const clientLogin = async (req, res) => {
-    const cli = await clientModel.findOne({ email: req.body.email });
+    console.log("Received client login data:", req.body); // Log incoming data for debugging
+    
+    try {
+        const { email, password } = req.body;
 
-    if (!cli) {
-        return res.json({ status: 'error', cli: false });
-    }
+        // Validate input fields
+        if (!email || !password) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Email and password are required'
+            });
+        }
 
-    const isPasswordValid = await bcrypt.compare(req.body.password, cli.password);
-    if (isPasswordValid) {
-        const token = jwt.sign(
-            { name: cli.name, email: cli.email },
-            SECRET_KEY,
-            { expiresIn: "1h" }
-        );
-        return res.json({ status: 'ok', cli: token, user: cli.name });
-    } else {
-        return res.json({ status: 'error', cli: false });
+        // Find client by email
+        const client = await clientModel.findOne({ email });
+
+        if (!client) {
+            return res.status(404).json({ 
+                status: 'error', 
+                message: 'No account found with this email',
+                cli: false 
+            });
+        }
+
+        // Compare passwords
+        const isPasswordValid = await bcrypt.compare(password, client.password);
+
+        if (isPasswordValid) {
+            const token = jwt.sign(
+                { 
+                    id: client._id,
+                    name: client.name, 
+                    email: client.email 
+                },
+                SECRET_KEY,
+                { expiresIn: "1h" }
+            );
+
+            // Send a more comprehensive client object but exclude sensitive data
+            const clientInfo = {
+                id: client._id,
+                name: client.name,
+                email: client.email,
+                phone: client.phone,
+                gender: client.gender,
+                projectsPosted: client.projectsPosted,
+                projectsCompleted: client.projectsCompleted,
+                totalExpense: client.totalExpense,
+                orders: client.orders // Contains order references
+            };
+
+            return res.json({ 
+                status: 'ok', 
+                message: 'Success',
+                cli: token, 
+                user: clientInfo
+            });
+        } else {
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'Invalid password',
+                cli: false 
+            });
+        }
+    } catch (error) {
+        console.error("Client login error:", error);
+        return res.status(500).json({ 
+            status: 'error', 
+            message: 'An error occurred during login. Please try again.',
+            cli: false 
+        });
     }
 };
 
+
+
 export const clientSignup = async (req, res) => {
     try {
+        // ? validation
+        if (!req.body.name || !req.body.email || !req.body.password || !req.body.gender || !req.body.phone) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'All fields (name, email, password, gender, phone) are required'
+            });
+        }
+
+        // Check if email or phone already exists
+        const existingClient = await clientModel.findOne({
+            $or: [
+                { email: req.body.email },
+                { phone: req.body.phone }
+            ]
+        });
+
+        if (existingClient) {
+            return res.status(400).json({
+                status: 'error',
+                message: existingClient.email === req.body.email 
+                    ? 'Email already in use' 
+                    : 'Phone number already in use'
+            });
+        }
+
+        // Hash password
         const newPassword = await bcrypt.hash(req.body.password, 10);
-        await clientModel.create({
+
+        // Create new client with all required fields
+        const newClient = await clientModel.create({
             name: req.body.name,
             email: req.body.email,
-            password: newPassword
+            password: newPassword,
+            gender: req.body.gender,
+            phone: req.body.phone,
+            // These fields will use their default values
+            projectsPosted: 0,
+            projectsCompleted: 0,
+            totalExpense: 0,
+            orders: []
         });
-        res.json({ status: 'ok' });
+
+        res.json({ 
+            status: 'ok',
+            message: 'Account created successfully',
+            user: {
+                id: newClient._id,
+                name: newClient.name,
+                email: newClient.email,
+                gender: newClient.gender,
+                phone: newClient.phone
+            }
+        });
+
     } catch (error) {
-        console.log(error);
-        res.json({ status: 'error' });
+        console.error("Signup error:", error);
+        res.status(500).json({ 
+            status: 'error',
+            message: 'An error occurred during signup',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
 
@@ -195,7 +304,9 @@ export const freelancerLogin = async (req, res) => {
                 username: freelancer.username,
                 phone: freelancer.phone,
                 tags: freelancer.tags,
-                rating: freelancer.rating
+                rating: freelancer.rating,
+                totalEarnings:freelancer.totalEarnings,
+                completedProjects:freelancer.completedProjects
             };
             
             return res.json({ 

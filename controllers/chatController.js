@@ -1,8 +1,10 @@
+// ?for : sends chat list, sends msgs, sends all msgs
+
 import Freelancer from "../models/freelancer.js";
 import Client from "../models/Client.js";
 import Message from '../models/messageModel.js';
 
-// Get all chats for a user
+// ? Get all chats for a user
 export const getChats = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -88,6 +90,9 @@ export const getChats = async (req, res) => {
             }
         }
 
+        // Add additional logging to debug response format
+        console.log("Sending chat data to client:", JSON.stringify(chats.slice(0, 2)));
+        
         res.json(chats);
     } catch (error) {
         console.error("Error fetching chats:", error);
@@ -95,7 +100,7 @@ export const getChats = async (req, res) => {
     }
 };
 
-// Send a message
+// ? Send a message
 export const sendMessage = async (req, res) => {
     try {
         const { senderId, receiverId, senderModel, receiverModel, message } = req.body;
@@ -128,7 +133,7 @@ export const sendMessage = async (req, res) => {
     }
 };
 
-// Get messages between two users
+// ? Get messages between two users
 export const getMessages = async (req, res) => {
     try {
         const { user1, user2 } = req.params;

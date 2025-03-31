@@ -1,5 +1,5 @@
 import express from "express";
-import cors from 'cors'
+import cors from 'cors';
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import mongodbURL from "./config.js";
@@ -13,14 +13,15 @@ import { sendMessage, getMessages } from "./controllers/chatController.js";
 import { getChats } from "./controllers/chatController.js";
 import http from "http";
 import { Server } from "socket.io";
-
+import Message from './models/messageModel.js'; // ADDED THIS IMPORT
+import Freelancer from './models/freelancer.js'; // ADDED THIS IMPORT
+import Client from './models/Client.js'; // ADDED THIS IMPORT
 
 const port = process.env.port || 8000;
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-
 
 app.use(cors({
     origin: "http://localhost:5173",
@@ -32,17 +33,14 @@ app.use(cors({
 mongoose.connect(`${mongodbURL}`, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-})
+});
 
 // Auth routes
 app.post('/verifyToken', verifyToken);
 app.post('/client-login', clientLogin);
 app.post('/client-signup', clientSignup);
-
 app.post('/freelancer-login', freelancerLogin);
 app.post('/freelancer-signup', freelancerSignUp);
-
-
 
 // Reminder routes
 app.post('/add-reminder', addReminder);
@@ -62,6 +60,10 @@ const io = new Server(server, {
     cors: {
         origin: "http://localhost:5173",
         methods: ["GET", "POST"]
+    },
+    connectionStateRecovery: { // ADDED FOR BETTER RECONNECT HANDLING
+        maxDisconnectionDuration: 2 * 60 * 1000,
+        skipMiddlewares: true,
     }
 });
 
@@ -69,13 +71,32 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
     console.log("A user connected:", socket.id);
 
-    socket.on("sendMessage", async (messageData) => {
+    // Store user ID for this socket connection
+    let currentUserId = null;
+
+    socket.on("joinUser", (userId) => {
+        if (currentUserId) {
+            socket.leave(currentUserId); // LEAVE PREVIOUS ROOM IF EXISTS
+        }
+        currentUserId = userId;
+        socket.join(userId);
+        console.log(`User ${userId} joined room (socket ${socket.id})`);
+        
+        // ADDED ACKNOWLEDGEMENT TO CLIENT
+        socket.emit("joinedRoom", { success: true, userId });
+    });
+
+    socket.on("sendMessage", async (messageData, callback) => { // ADDED CALLBACK
         console.log("Received message via socket:", messageData);
         
         try {
             const { senderId, receiverId, senderModel, receiverModel, message } = messageData;
             
-            // Create and save the message
+            // VALIDATE INPUTS
+            if (!senderId || !receiverId || !senderModel || !receiverModel || !message) {
+                throw new Error("Missing required message fields");
+            }
+
             const newMessage = new Message({
                 senderId,
                 receiverId,
@@ -85,36 +106,54 @@ io.on("connection", (socket) => {
                 timestamp: new Date()
             });
             
-            await newMessage.save();
+            const savedMessage = await newMessage.save();
+            console.log("Saved message to DB:", savedMessage);
             
-            // Broadcast to all connected clients
-            io.emit("receiveMessage", newMessage);
+            // Emit to specific user rooms only
+            io.to(senderId).emit("receiveMessage", savedMessage);
+            io.to(receiverId).emit("receiveMessage", savedMessage);
             
-            console.log("Message broadcasted successfully");
+            console.log(`Message broadcasted to ${senderId} and ${receiverId}`);
+            
+            // ADDED ACKNOWLEDGEMENT
+            if (callback) {
+                callback({ success: true, message: savedMessage });
+            }
         } catch (error) {
             console.error("Error processing socket message:", error);
+            if (callback) {
+                callback({ success: false, error: error.message });
+            }
         }
     });
 
-    socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
+    socket.on("disconnect", (reason) => { // ADDED REASON LOGGING
+        console.log(`User ${currentUserId || 'unknown'} disconnected (socket ${socket.id}): ${reason}`);
+        if (currentUserId) {
+            socket.leave(currentUserId);
+        }
+    });
+
+    // ADDED ERROR HANDLER
+    socket.on("error", (error) => {
+        console.error(`Socket error for user ${currentUserId}:`, error);
     });
 });
 
-
-// Chat routes - updated paths to match frontend
+// Chat routes
 app.post('/send-message', sendMessage);
 app.get('/messages/:user1/:user2', getMessages);
 app.get('/chats/:userId', getChats);
 
-// Optional: Add routes to fetch user details
+// User detail routes
 app.get('/freelancers/:id', async (req, res) => {
     try {
-        const freelancer = await Freelancer.findById(req.params.id).select('name username');
+        const freelancer = await Freelancer.findById(req.params.id)
+            .select('name username totalEarnings completedProjects rating tags email phone');
         if (!freelancer) {
             return res.status(404).json({ error: "Freelancer not found" });
         }
-        res.json(freelancer);
+        res.status(200).json(freelancer);
     } catch (error) {
         res.status(500).json({ error: "Server error" });
     }
@@ -132,19 +171,9 @@ app.get('/clients/:id', async (req, res) => {
     }
 });
 
-// -----------------------------
-
-
 // Start cron jobs
 startReminderCron();
 
-// --------------------------------------------------------------------------------
-
-// app.listen(port,()=>{
-//     console.log(`Server is running on port ${port}`);    
-// })  Not this because 👇
-
-// This ensures both Express API & Socket.io run on the same server.
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
