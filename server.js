@@ -24,7 +24,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use(cors({
-    origin: "https://workforceapp.vercel.app",    // global
+    origin: "https://workforce-frontend.vercel.app",    // global
     // origin: "http://localhost:5173", // local
     optionsSuccessStatus: 200,
     methods: ["POST", "GET"],
@@ -59,7 +59,7 @@ app.get('/freelancers', sendFreelancersData);
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "https://workforceapp.vercel.app", // global
+        origin: "https://workforce-frontend.vercel.app", // global
         // origin: "http://localhost:5173",    // local
         methods: ["GET", "POST"]
     },
