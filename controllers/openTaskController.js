@@ -4,38 +4,38 @@ import openTaskModel from "../models/OpenTask.js";
 // creates new open task - "New Project" Btn
 export const newOpenTask = async (req, res) => {
     try {
-        const {
-            account, 
-            project, 
-            budget, 
-            extras
-        } = req.body;
+        const { account, project, budget, extras } = req.body;
 
+        // Transform the incoming data to match the OpenTask schema
         const newTask = await openTaskModel.create({
             clientName: account.name,
             clientEmail: account.email,
             
             // Project Details
             category: project.category,
-            title: project.title,
+            projTitle: project.title,  // Changed from title to projTitle
             description: project.description,
-            references: project.references, // Array of links
-            deadline: project.deadline,
-            revisionsAllowed: project.revisions,
+            references: project.references ? [project.references] : [], // Ensure array format
+            deadline: new Date(project.deadline),
+            revisionsAllowed: parseInt(project.revisions) || 3,
 
             // Budget & Pricing
-            budgetAmount: budget.amount,
+            budgetAmount: parseFloat(budget.amount) || 50,
 
-            // Extras (optional fields)
-            freelancerNotes: extras.notes,
-            freelancerQues: extras.questions
+            // Extras
+            freelancerNotes: extras.notes || "",
+            freelancerQues: extras.questions || ""
         });
 
         res.json({ status: "ok", message: "Task created successfully", task: newTask });
 
     } catch (error) {
         console.error("Error creating task:", error);
-        res.status(500).json({ status: "error", message: "Task creation failed", error });
+        res.status(500).json({ 
+            status: "error", 
+            message: "Task creation failed",
+            error: error.message // Send only the message to frontend
+        });
     }
 };
 

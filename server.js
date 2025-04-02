@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import mongodbURL from "./config.js";
 import { verifyToken, clientLogin, clientSignup, freelancerLogin, freelancerSignUp } from './controllers/authController.js';
-import { addReminder } from './controllers/reminderController.js';
+import { addReminder, getReminders } from './controllers/reminderController.js';
 import { startReminderCron } from './cron.js';
 import { newOpenTask } from "./controllers/openTaskController.js";
 import { sendOpenTasks } from "./controllers/openTaskController.js";
@@ -24,13 +24,12 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use(cors({
-    origin: "https://workforce-frontend.vercel.app",    // global
-    // origin: "http://localhost:5173", // local
+    origin: ["https://workforce-frontend.vercel.app","http://localhost:5173"], // global,local
     optionsSuccessStatus: 200,
     methods: ["POST", "GET"],
-    credentials: true
+    credentials: true,
+    allowedHeaders: "Content-Type,Authorization"
 }));
-
 mongoose.connect(`${mongodbURL}`, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -45,6 +44,8 @@ app.post('/freelancer-signup', freelancerSignUp);
 
 // Reminder routes
 app.post('/add-reminder', addReminder);
+app.get('/get-reminders', getReminders)
+
 
 // new open task
 app.post('/open-task', newOpenTask);
@@ -54,12 +55,11 @@ app.get('/open-work', sendOpenTasks);
 
 // fetch freelancers
 app.get('/freelancers', sendFreelancersData);
-
 // ---------------------------- CHAT SYSTEM 
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "https://workforce-frontend.vercel.app", // global
+        origin: ["https://workforce-frontend.vercel.app","http://localhost:5173"], // global
         // origin: "http://localhost:5173",    // local
         methods: ["GET", "POST"]
     },
