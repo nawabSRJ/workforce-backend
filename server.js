@@ -11,17 +11,20 @@ import { sendOpenTasks } from "./controllers/openTaskController.js";
 import { sendFreelancersData } from "./controllers/sendFreelancers.js";
 import { sendMessage, getMessages } from "./controllers/chatController.js";
 import { getChats } from "./controllers/chatController.js";
+import { createOrderFromChat, getClientOpenTasks } from './controllers/orderController.js';
 import http from "http";
 import { Server } from "socket.io";
-import Message from './models/messageModel.js'; // ADDED THIS IMPORT
-import Freelancer from './models/freelancer.js'; // ADDED THIS IMPORT
-import Client from './models/Client.js'; // ADDED THIS IMPORT
+import Message from './models/messageModel.js';
+import Freelancer from './models/freelancer.js';
+import Client from './models/Client.js';
+import multer from 'multer';
 
 const port = process.env.port || 8000;
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true })); //  for form data
 
 app.use(cors({
     origin: ["https://workforce-frontend.vercel.app","http://localhost:5173"], // global,local
@@ -46,12 +49,20 @@ app.post('/freelancer-signup', freelancerSignUp);
 app.post('/add-reminder', addReminder);
 app.get('/get-reminders', getReminders)
 
+// Configure multer for file uploads
+const upload = multer({
+    storage: multer.memoryStorage(), // Store files in memory
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+        files: 3 // Max 3 files
+    }
+});
 
-// new open task
-app.post('/open-task', newOpenTask);
-
-// sends the open tasks data to frontend
-app.get('/open-work', sendOpenTasks);
+// new open task routes
+app.post('/open-task', upload.array('samples'), newOpenTask);
+app.post('/create-order', createOrderFromChat);
+app.get('/open-tasks/:clientId', getClientOpenTasks);
+app.get('/open-work', sendOpenTasks); // sends the open tasks data to frontend
 
 // fetch freelancers
 app.get('/freelancers', sendFreelancersData);
