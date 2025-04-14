@@ -9,6 +9,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// ? create new open task
 export const newOpenTask = async (req, res) => {
     try {
         // Validate required fields
@@ -83,12 +84,42 @@ export const newOpenTask = async (req, res) => {
     }
 };
 
-// for sending open tasks to the frontend
+// ? for sending open tasks to the frontend
 export const sendOpenTasks = async (req,res)=>{
     try {
         const data = await openTaskModel.find();    // fetches all the records
         res.status(200).json(data);
     } catch (error) {
         res.status(500).json({error:"Failed to fetch open tasks"})
+    }
+}
+
+
+// ? for updating the application count after a freelancer successfully request using message
+
+export const applyForTask = async(req,res)=>{
+    try {
+        const {taskId} = req.params;
+        if(!mongoose.Types.ObjectId.isValid(taskId)){
+            return res.status(400).json({message:'Invalid Task Id'});
+        }
+
+        const updatedTask = await openTaskModel.findByIdAndUpdate(
+            taskId,
+            {$inc : {applicationsCount:1}},
+            {new:true} // ? why this line?
+        )
+
+        if(!updatedTask){
+            return res.status(404).json({ message: "Open task not found" });
+        }
+
+        res.status(200).json({
+            message: "Application count incremented successfully",
+            task: updatedTask
+          });
+    } catch (error) {
+        console.error("Error updating applications count:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 }

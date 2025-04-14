@@ -1,5 +1,6 @@
 import Project from '../models/projects.js';
 import OpenTask from '../models/OpenTask.js';
+import PrivateTask from '../models/PrivateTask.js';
 import mongoose from 'mongoose';
 
 export const createOrderFromChat = async (req, res) => {

@@ -43,6 +43,7 @@ const OpenTaskSchema = new mongoose.Schema({
         enum: ['Open', 'In Discussion', 'Accepted', 'Closed'],
         default: 'Open'
     },
+    applicationsCount : {type:Number, default:0},
 
     // Timestamps
     createdAt: { type: Date, default: Date.now },

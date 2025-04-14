@@ -23,6 +23,7 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    type: { type: String, enum: ['message', 'request'], default: 'message' },
     timestamp: {
         type: Date,
         default: Date.now

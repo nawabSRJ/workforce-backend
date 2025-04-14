@@ -166,83 +166,143 @@ export const clientSignup = async (req, res) => {
 // ------------------------------- Freelancer Auth
 
 // Freelancer SignUp
-export const freelancerSignUp = async(req, res) => {
-    console.log("Received signup data:", req.body); // Log incoming data for debugging
-    
+export const freelancerSignUp = async (req, res) => {
+    console.log("Received signup data:", req.body);
+
     try {
-        // Check if required fields are present
-        const { name, email, password, username, phone, gender, tags } = req.body;
-        
-        if (!name || !email || !password || !username || !phone || !gender || !tags) {
+        const { 
+            name, 
+            email, 
+            password, 
+            username, 
+            gender, 
+            tags, 
+            dateOfBirth, 
+            country,
+            bio,
+            phone,
+            portfolioWebsite,
+            linkedIn,
+            twitter
+        } = req.body;
+
+        // Validation of fields
+        const requiredFields = {
+            name,
+            email,
+            password,
+            username,
+            gender,
+            tags,
+            dateOfBirth,
+            country,
+            bio,
+            phoneCode: phone?.code,
+            phoneNumber: phone?.number
+        };
+
+        for (const [field, value] of Object.entries(requiredFields)) {
+            if (!value || (Array.isArray(value) && value.length === 0)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: `Missing required field: ${field.replace('phoneCode', 'phone code').replace('phoneNumber', 'phone number')}`
+                });
+            }
+        }
+
+        // Validate date format
+        if (isNaN(new Date(dateOfBirth).getTime())) {
             return res.status(400).json({
                 status: 'error',
-                message: 'All fields are required'
+                message: 'Invalid date of birth format'
             });
         }
-        
-        // Check if email already exists
-        const existingEmail = await freelancerModel.findOne({ email });
+
+        // Check existing records
+        const [existingEmail, existingUsername, existingPhone] = await Promise.all([
+            freelancerModel.findOne({ email }),
+            freelancerModel.findOne({ username }),
+            freelancerModel.findOne({ 'phone.number': phone.number })
+        ]);
+
         if (existingEmail) {
             return res.status(400).json({
                 status: 'error',
                 message: 'Email already in use'
             });
         }
-        
-        // Check if username already exists
-        const existingUsername = await freelancerModel.findOne({ username });
+
         if (existingUsername) {
             return res.status(400).json({
                 status: 'error',
                 message: 'Username already in use'
             });
         }
-        const existingPhoneNumber = await freelancerModel.findOne({phone});
-        if(existingPhoneNumber){
+
+        if (existingPhone) {
             return res.status(400).json({
-                status:'error',
-                message:'Phone number already in use',
-            })
+                status: 'error',
+                message: 'Phone number already in use'
+            });
         }
-        // Hash the password
+
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // Create the new freelancer document
+
+        // Create new freelancer
         const newFreelancer = new freelancerModel({
             name,
             email,
             password: hashedPassword,
             username,
-            phone,
-            gender, // Added gender field
+            gender,
             tags,
+            dateOfBirth: new Date(dateOfBirth),
+            country,
+            bio,
+            phone: {
+                code: phone.code,
+                number: phone.number
+            },
+            portfolioWebsite: portfolioWebsite || '',
+            linkedIn: linkedIn || '',
+            twitter: twitter || '',
             rating: 0,
-            services: req.body.services || [],
+            services: [],
+            createdAt: new Date()
         });
-        
-        // Save the new freelancer
+
         await newFreelancer.save();
-        
-        // Return success response
+
         return res.status(201).json({
             status: 'ok',
             message: 'Signup successful!',
-            user: name
+            user: {
+                name,
+                email,
+                username
+            }
         });
+
     } catch (error) {
         console.error("Signup error:", error);
-        
-        // Improved error handling with more specific error messages
+
+        // Handle duplicate key errors
         if (error.code === 11000) {
-            // Handle duplicate key error (email or username already exists)
             const field = Object.keys(error.keyPattern)[0];
+            const fieldMap = {
+                'email': 'Email',
+                'username': 'Username',
+                'phone.number': 'Phone number'
+            };
+            
             return res.status(400).json({ 
                 status: 'error',
-                message: `This ${field} is already in use. Please try another one.`
+                message: `${fieldMap[field] || field} already exists`
             });
         }
-        
-        // Return validation errors if present
+
+        // Handle validation errors
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({ 
@@ -250,11 +310,19 @@ export const freelancerSignUp = async(req, res) => {
                 message: errors.join(', ')
             });
         }
-        
-        // Generic error
+
+        // Handle invalid date error
+        if (error.name === 'CastError' && error.path === 'dateOfBirth') {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Invalid date format for date of birth'
+            });
+        }
+
+        // Generic server error
         return res.status(500).json({ 
             status: 'error',
-            message: 'An error occurred during signup. Please try again.'
+            message: 'Internal server error. Please try again later.'
         });
     }
 };
