@@ -19,6 +19,7 @@ import multer from 'multer';
 import http from "http";
 import { initChatService } from "./services/chatService.js";
 import { getClientRequests, sendFreelancerRequest, updateRequestStatus } from "./controllers/freelancerRequestController.js";
+import { updateClientProfile } from "./controllers/updateClient.js";
 
 const port = process.env.port || 8000;
 
@@ -79,6 +80,10 @@ app.get('/private-tasks/:clientId', getClientPrivateOrders);
 
 // Freelancers route
 app.get('/freelancers', sendFreelancersData);
+
+// Client Routes
+app.put('/client/update-profile/:clientId', updateClientProfile);
+
 
 // Chat HTTP routes
 app.post('/send-message', sendMessage);
