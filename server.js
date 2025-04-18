@@ -20,6 +20,7 @@ import http from "http";
 import { initChatService } from "./services/chatService.js";
 import { deleteFreelancerRequest, getClientRequests, sendFreelancerRequest, updateRequestStatus } from "./controllers/freelancerRequestController.js";
 import { updateClientProfile } from "./controllers/updateClient.js";
+import { updateFreelancerProfile } from "./controllers/updateFreelancer.js";
 
 const port = process.env.port || 8000;
 
@@ -80,6 +81,7 @@ app.get('/private-tasks/:clientId', getClientPrivateOrders);
 
 // Freelancers route
 app.get('/freelancers', sendFreelancersData);
+app.put('/freelancer/update-profile/:freelancerUsername', updateFreelancerProfile);
 
 // Client Routes
 app.put('/client/update-profile/:clientId', updateClientProfile);
