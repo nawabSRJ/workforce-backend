@@ -125,3 +125,27 @@ export const updateRequestStatus = async (req, res) => {
     res.status(500).json({ message: "Server error", details: error.message });
   }
 };
+
+
+// * delete freelancer request : rejected by the client 
+export const deleteFreelancerRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    
+    // Find and delete the request
+    const deletedRequest = await FreelancerRequest.findByIdAndDelete(requestId);
+    
+    if (!deletedRequest) {
+      return res.status(404).json({ message: 'Request not found' });
+    }
+    
+    return res.status(200).json({ 
+      message: 'Request deleted successfully',
+      deletedRequest 
+    });
+    
+  } catch (error) {
+    console.error('Error deleting freelancer request:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};

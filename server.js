@@ -18,7 +18,7 @@ import Client from './models/Client.js';
 import multer from 'multer';
 import http from "http";
 import { initChatService } from "./services/chatService.js";
-import { getClientRequests, sendFreelancerRequest, updateRequestStatus } from "./controllers/freelancerRequestController.js";
+import { deleteFreelancerRequest, getClientRequests, sendFreelancerRequest, updateRequestStatus } from "./controllers/freelancerRequestController.js";
 import { updateClientProfile } from "./controllers/updateClient.js";
 
 const port = process.env.port || 8000;
@@ -31,7 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({
   origin: ["https://workforce-frontend.vercel.app", "http://localhost:5173"],
   optionsSuccessStatus: 200,
-  methods: ["POST", "GET", "PATCH","PUT"],
+  methods: ["POST", "GET", "PATCH","PUT", "DELETE"],
   credentials: true,
   allowedHeaders: "Content-Type,Authorization"
 }));
@@ -72,7 +72,7 @@ app.patch('/open-task/apply/:taskId', applyForTask);
 app.post("/freelancer-request", sendFreelancerRequest);
 app.get("/api/freelancer-requests/:clientId", getClientRequests); 
 app.patch("/freelancer-request/:requestId", updateRequestStatus);
-
+app.delete("/freelancer-request/:requestId", deleteFreelancerRequest);
 
 // Private Order routes
 app.post('/private-tasks', upload.array('samples'), createPrivateOrder);
