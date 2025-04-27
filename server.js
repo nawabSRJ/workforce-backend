@@ -6,7 +6,7 @@ import mongodbURL from "./config.js";
 import { verifyToken, clientLogin, clientSignup, freelancerLogin, freelancerSignUp } from './controllers/authController.js';
 import { addReminder, getReminders } from './controllers/reminderController.js';
 import { startReminderCron } from './cron.js';
-import { applyForTask, newOpenTask } from "./controllers/openTaskController.js";
+import { applyForTask, newOpenTask, updateTaskStatus } from "./controllers/openTaskController.js";
 import { sendOpenTasks } from "./controllers/openTaskController.js";
 import { sendFreelancersData } from "./controllers/sendFreelancers.js";
 import { sendMessage, getMessages } from "./controllers/chatController.js";
@@ -68,6 +68,7 @@ app.post('/create-order', createOrderFromChat);
 app.get('/open-tasks/:clientId', getClientOpenTasks);
 app.get('/open-work', sendOpenTasks);
 app.patch('/open-task/apply/:taskId', applyForTask);
+app.patch('/open-task/:taskId/status', updateTaskStatus);
 
 // freelancer requests
 app.post("/freelancer-request", sendFreelancerRequest);
