@@ -54,6 +54,34 @@ export const getFreelancerProjects = async (req, res) => {
     }
 };
 
+// done by the freelancer only
+export const updateProjectProgress = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { progress } = req.body;
+
+        // Validate progress value
+        if (progress === undefined || progress < 0 || progress > 100) {
+            return res.status(400).json({ error: "Progress must be between 0 and 100" });
+        }
+
+        const updatedProject = await Project.findByIdAndUpdate(
+            projectId,
+            { progress },
+            { new: true }
+        );
+
+        if (!updatedProject) {
+            return res.status(404).json({ error: "Project not found" });
+        }
+
+        res.status(200).json(updatedProject);
+    } catch (error) {
+        console.error('Error updating project progress:', error);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
 export const createProject = async (req, res) => {
     try {
         const { sourceType, taskId, clientId, freelancerId, amount } = req.body;

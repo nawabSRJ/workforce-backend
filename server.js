@@ -21,7 +21,7 @@ import { initChatService } from "./services/chatService.js";
 import { deleteFreelancerRequest, getClientRequests, sendFreelancerRequest, updateRequestStatus } from "./controllers/freelancerRequestController.js";
 import { updateClientProfile } from "./controllers/updateClient.js";
 import { updateFreelancerProfile } from "./controllers/updateFreelancer.js";
-import { getFreelancerProjects } from "./controllers/projectController.js";
+import { getFreelancerProjects, updateProjectProgress } from "./controllers/projectController.js";
 
 const port = process.env.port || 8000;
 
@@ -89,8 +89,8 @@ app.put('/freelancer/update-profile/:freelancerUsername', updateFreelancerProfil
 app.put('/client/update-profile/:clientId', updateClientProfile);
 
 // Project Routes
-// Add to server.js routes
 app.get('/projects/:username', getFreelancerProjects);
+app.patch('/projects/:projectId/progress', updateProjectProgress);
 
 // Chat HTTP routes
 app.post('/send-message', sendMessage);
