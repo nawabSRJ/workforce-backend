@@ -82,6 +82,45 @@ export const updateProjectProgress = async (req, res) => {
     }
 };
 
+// * ----------------------------- For Client ------------------------
+// Add to projectController.js
+export const getClientProjects = async (req, res) => {
+    try {
+        const { clientId } = req.params;
+
+        // Get projects with freelancer details
+        const projects = await Project.find({ clientId })
+            .populate('freelancerId', 'name username')
+            .sort({ createdAt: -1 });
+
+        // Format the response
+        const formattedProjects = projects.map(project => ({
+            _id: project._id,
+            title: project.title,
+            description: project.description,
+            tags: project.tags,
+            freelancerName: project.freelancerId?.name || 'Freelancer',
+            freelancerUsername: project.freelancerId?.username || '',
+            dueDate: project.dueDate,
+            progress: project.progress,
+            amount: project.amount,
+            status: project.status,
+            completeDate: project.completeDate,
+            revisionsAllowed: project.revisionsAllowed,
+            revisionsLeft: project.revisionsLeft,
+            startDate: project.startDate
+        }));
+
+        res.status(200).json(formattedProjects);
+    } catch (error) {
+        console.error('Error fetching client projects:', error);
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+
+
+// ----------------------------------------------------------------------------
 export const createProject = async (req, res) => {
     try {
         const { sourceType, taskId, clientId, freelancerId, amount } = req.body;
