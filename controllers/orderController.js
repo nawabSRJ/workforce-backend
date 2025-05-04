@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 import clientModel from '../models/Client.js';
 
 export const createOrderFromChat = async (req, res) => {
+  console.log("--- createOrderFromChat STARTED ---");
+  console.log("Request body:", req.body);
+  console.log("Request headers:", req.headers);
   try {
     const { clientId, freelancerId, openTaskId, amount } = req.body;
     
@@ -45,6 +48,14 @@ export const createOrderFromChat = async (req, res) => {
       });
     }
     
+    // Check if task is already accepted
+    if (openTask.status === 'Accepted') {
+      return res.status(400).json({
+        success: false,
+        message: 'This task has already been accepted'
+      });
+    }
+    
     console.log("[createOrderFromChat] Found open task:", {
       id: openTask._id,
       title: openTask.projTitle,
@@ -53,9 +64,9 @@ export const createOrderFromChat = async (req, res) => {
     
     // Prepare project data
     const projectData = {
-      clientId,
-      freelancerId,
-      openTaskId,
+      clientId: new mongoose.Types.ObjectId(clientId),
+      freelancerId: new mongoose.Types.ObjectId(freelancerId),
+      openTaskId: new mongoose.Types.ObjectId(openTaskId),
       title: openTask.projTitle,
       description: openTask.description,
       category: openTask.category,
@@ -74,61 +85,24 @@ export const createOrderFromChat = async (req, res) => {
     
     console.log("[createOrderFromChat] Creating project with data:", projectData);
     
-    // Method 1: Try using the normal model approach
-    try {
-      const newProject = new Project(projectData);
-      const savedProject = await newProject.save();
-      console.log("[createOrderFromChat] Project saved using Model approach:", savedProject._id);
-      
-      // Update the open task status to 'Accepted'
-      openTask.status = 'Accepted';
-      await openTask.save();
-      
-      return res.status(201).json({
-        success: true,
-        message: 'Order created successfully',
-        project: savedProject
-      });
-    } catch (modelError) {
-      console.error("[createOrderFromChat] Error with Model approach:", modelError);
-      
-      // Method 2: Try using direct MongoDB collection
-      try {
-        console.log("[createOrderFromChat] Trying direct MongoDB approach");
-        
-        // Convert ObjectIds for direct insertion
-        const directData = {
-          ...projectData,
-          clientId: new mongoose.Types.ObjectId(clientId),
-          freelancerId: new mongoose.Types.ObjectId(freelancerId),
-          openTaskId: new mongoose.Types.ObjectId(openTaskId)
-        };
-        
-        const db = mongoose.connection.db;
-        const result = await db.collection('projects').insertOne(directData);
-        
-        if (result.insertedId) {
-          console.log("[createOrderFromChat] Project saved using direct MongoDB:", result.insertedId);
-          
-          // Update the open task status
-          openTask.status = 'Accepted';
-          await openTask.save();
-          
-          return res.status(201).json({
-            success: true,
-            message: 'Order created successfully using direct DB insertion',
-            project: { _id: result.insertedId, ...directData }
-          });
-        } else {
-          throw new Error("Failed to insert document");
-        }
-      } catch (dbError) {
-        console.error("[createOrderFromChat] Error with direct MongoDB approach:", dbError);
-        throw dbError; // Re-throw to be caught by outer catch
-      }
-    }
+    // Create the project
+    const newProject = new Project(projectData);
+    const savedProject = await newProject.save();
+    
+    console.log("[createOrderFromChat] Project created successfully:", savedProject._id);
+    
+    // Update the open task status to 'Accepted'
+    openTask.status = 'Accepted';
+    await openTask.save();
+    
+    return res.status(201).json({
+      success: true,
+      message: 'Order created successfully',
+      project: savedProject
+    });
+    
   } catch (error) {
-    console.error('[createOrderFromChat] Final error:', error);
+    console.error('[createOrderFromChat] Error:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to create order',
