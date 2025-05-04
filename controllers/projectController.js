@@ -1,3 +1,58 @@
+// controllers/projectController.js
+import Project from '../models/projects.js';
+import Freelancer from '../models/freelancer.js';
+import Client from '../models/Client.js';
+
+export const getFreelancerProjects = async (req, res) => {
+    try {
+        const { username } = req.params;
+        
+        // Find freelancer by username to get their ID
+        const freelancer = await Freelancer.findOne({ username });
+        if (!freelancer) {
+            return res.status(404).json({ error: "Freelancer not found" });
+        }
+
+        // Get projects with client details
+        const projects = await Project.find({ freelancerId: freelancer._id })
+            .populate({
+                path: 'clientId',
+                select: 'name',
+                model: 'Client'
+            })
+            .sort({ createdAt: -1 });
+
+        // Format the response with null checks
+        const formattedProjects = projects.map(project => {
+            // Safely handle cases where client might not be found
+            const clientName = project.clientId?.name || 'Unknown Client';
+            
+            return {
+                _id: project._id,
+                title: project.title,
+                description: project.description,
+                tags: project.tags || [],
+                clientName,
+                dueDate: project.dueDate,
+                progress: project.progress || 0,
+                amount: project.amount || 0,
+                status: project.status || 'Pending',
+                completeDate: project.completeDate,
+                revisionsAllowed: project.revisionsAllowed || 0,
+                revisionsLeft: project.revisionsLeft || 0,
+                startDate: project.startDate
+            };
+        });
+
+        res.status(200).json(formattedProjects);
+    } catch (error) {
+        console.error('Error fetching projects:', error);
+        res.status(500).json({ 
+            error: "Server error",
+            details: error.message 
+        });
+    }
+};
 
 export const createProject = async (req, res) => {
     try {
